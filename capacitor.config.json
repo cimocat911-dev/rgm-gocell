@@ -1,0 +1,7 @@
+{
+  "appId": "com.rgm.gocell",
+  "appName": "Rgm Gocell",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": { "LocalNotifications": { "smallIcon": "ic_launcher_foreground", "iconColor": "#1f8a4c" } }
+}

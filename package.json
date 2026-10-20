@@ -1,0 +1,32 @@
+{
+  "name": "rgm-gocell",
+  "version": "1.0.0",
+  "description": "Rgm Gocell - aplikasi keuangan kewajiban, modal, kas, piutang dan kredit",
+  "author": "RGMC",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:exe": "electron-builder --win nsis portable --x64",
+    "cap:sync": "npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "6.1.2",
+    "@capacitor/core": "6.1.2",
+    "@capacitor/local-notifications": "6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.1.2",
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.rgm.gocell",
+    "productName": "Rgm Gocell",
+    "directories": { "output": "dist" },
+    "files": ["electron/**", "www/**", "package.json"],
+    "win": { "icon": "build/icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Rgm Gocell", "artifactName": "Rgm-Gocell-Setup-${version}.exe" },
+    "portable": { "artifactName": "Rgm-Gocell-Portable-${version}.exe" }
+  }
+}
