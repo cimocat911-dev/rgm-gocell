@@ -1,0 +1,20 @@
+const { app, BrowserWindow, shell, Notification, ipcMain, session } = require('electron');
+const path = require('path');
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1280, height: 820, minWidth: 380, minHeight: 600,
+    title: 'Rgm Gocell', backgroundColor: '#0f5c31', autoHideMenuBar: true,
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
+  // izinkan mikrofon, lokasi, notifikasi untuk aplikasi sendiri
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(['media', 'geolocation', 'notifications', 'clipboard-sanitized-write'].includes(perm)));
+  // tautan WhatsApp, Gmail, Google Maps dibuka di browser bawaan
+  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('file:')) { e.preventDefault(); shell.openExternal(url); } });
+  win.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+}
+ipcMain.on('notify', (_e, t, b) => { try { new Notification({ title: 'Rgm Gocell · ' + t, body: b }).show(); } catch (e) {} });
+app.setAppUserModelId('com.rgm.gocell');
+app.whenReady().then(createWindow);
+app.on('window-all-closed', () => app.quit());

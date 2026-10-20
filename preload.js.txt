@@ -1,0 +1,2 @@
+const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('rgmcDesktop', { notify: (t, b) => ipcRenderer.send('notify', t, b) });

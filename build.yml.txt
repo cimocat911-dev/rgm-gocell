@@ -1,0 +1,75 @@
+name: Build Rgm Gocell
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Siapkan ikon
+        run: mkdir -p build && cp -n icon.png build/icon.png || true
+      - name: Pasang dependensi
+        run: npm install --no-audit --no-fund
+      - name: Buat proyek Android
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Izin, nama aplikasi, dan ikon
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <application#' $M
+          R=android/app/src/main/res
+          rm -rf $R/mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do n=${d%%:*}; s=${d##*:}; mkdir -p $R/mipmap-$n
+            convert build/icon.png -resize ${s}x${s} $R/mipmap-$n/ic_launcher.png
+            cp $R/mipmap-$n/ic_launcher.png $R/mipmap-$n/ic_launcher_round.png
+            convert build/icon.png -resize ${s}x${s} $R/mipmap-$n/ic_launcher_foreground.png; done
+          sed -i 's/versionCode 1/versionCode ${{ github.run_number }}/' android/app/build.gradle
+      - name: Kunci tanda tangan (keystore)
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > rgmc.jks; echo "PASS=$KS_PASS" >> $GITHUB_ENV
+          else keytool -genkeypair -v -keystore rgmc.jks -alias rgmc -keyalg RSA -keysize 2048 -validity 10000 -storepass rgmc123456 -keypass rgmc123456 -dname "CN=RGMC, O=RGMC, C=ID"; echo "PASS=rgmc123456" >> $GITHUB_ENV; fi
+      - name: Build APK & AAB
+        run: |
+          cd android
+          chmod +x gradlew
+          SIGN="-Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/rgmc.jks -Pandroid.injected.signing.store.password=$PASS -Pandroid.injected.signing.key.alias=rgmc -Pandroid.injected.signing.key.password=$PASS"
+          ./gradlew assembleRelease bundleRelease $SIGN
+          mkdir -p ../out
+          cp app/build/outputs/apk/release/*.apk ../out/Rgm-Gocell.apk
+          cp app/build/outputs/bundle/release/*.aab ../out/Rgm-Gocell.aab
+          cp ../rgmc.jks ../out/rgmc-keystore.jks
+      - uses: actions/upload-artifact@v4
+        with: { name: Rgm-Gocell-Android-APK-AAB, path: out/ }
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Siapkan ikon
+        shell: bash
+        run: mkdir -p build && cp -n icon.png build/icon.png || true
+      - run: npm install --no-audit --no-fund
+      - name: Build EXE
+        run: npx electron-builder --win nsis portable --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with: { name: Rgm-Gocell-Windows-EXE, path: dist/*.exe }
+
+  html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with: { name: Rgm-Gocell-HTML, path: www/index.html }
